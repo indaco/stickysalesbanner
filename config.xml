@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<module>
+	<name>stickysalesbanner</name>
+	<displayName><![CDATA[Sticky Sales banner]]></displayName>
+	<version><![CDATA[1.0.0]]></version>
+	<description><![CDATA[This module creates a sticky banner at the bottom of the pages]]></description>
+	<author><![CDATA[indaco]]></author>
+	<tab><![CDATA[others]]></tab>
+	<is_configurable>1</is_configurable>
+	<need_instance>1</need_instance>
+</module>
