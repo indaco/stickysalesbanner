@@ -1,10 +1,10 @@
-name: release
+name: Release
 on:
-  push:
-    branches: [stable]
+  release:
+    types: [created]
+
 jobs:
   deploy:
-    name: build dependencies & create artifact
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
