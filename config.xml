@@ -2,7 +2,7 @@
 <module>
 	<name>stickysalesbanner</name>
 	<displayName><![CDATA[Sticky Sales banner]]></displayName>
-	<version><![CDATA[1.0.0]]></version>
+	<version><![CDATA[1.1.0]]></version>
 	<description><![CDATA[This module creates a sticky banner at the bottom of the pages]]></description>
 	<author><![CDATA[indaco]]></author>
 	<tab><![CDATA[others]]></tab>

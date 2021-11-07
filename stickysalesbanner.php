@@ -41,7 +41,7 @@ class Stickysalesbanner extends Module
     {
         $this->name = 'stickysalesbanner';
         $this->tab = 'others';
-        $this->version = '1.0.0';
+        $this->version = '1.1.0';
         $this->author = 'indaco';
         $this->need_instance = 0;
         $this->ps_versions_compliancy = array('min' => '1.7', 'max' => _PS_VERSION_);
