@@ -1,4 +1,9 @@
-# Sticky Sales banner
+<div align="center">
+    <h1>Sticky Sales banner</h1>
+    <img src="screenshots/module_tile.png" alt="module tile"/>
+</div>
+
+## Overview
 
 Prestashop module to create a sticky banner at the bottom of the pages.
 
