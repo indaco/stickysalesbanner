@@ -18,26 +18,26 @@
  * @license   https://opensource.org/licenses/AFL-3.0  Academic Free License (AFL 3.0)
  */
 
+require_once _PS_MODULE_DIR_ . 'stickysalesbanner/classes/helpers/FormValidator.php';
+
+use StickySalesBanner\Helpers\FormValidator;
+
 class StickysalesbannerGetContentController
 {
     /** @var null */
     protected $module = null;
-    /** @var null */
-    protected $file = null;
     /** @var Context|null */
     protected $context = null;
-    /** @var null */
-    protected $_path = null;
     /** @var \PrestaShopBundle\Translation\TranslatorComponent|null */
     protected $translator = null;
+    private $db = null;
 
     public function __construct($module, $file, $path)
     {
         $this->module = $module;
-        $this->file = $file;
         $this->context = Context::getContext();
-        $this->_path = $path;
         $this->translator = $this->context->getTranslator();
+        $this->db = Db::getInstance(_PS_USE_SQL_SLAVE_);
     }
 
     public function run()
@@ -76,12 +76,127 @@ class StickysalesbannerGetContentController
         //$helper->identifier = $this->identifier;
 
         $helper->tpl_vars = [
-            'fields_value' => $this->getConfigFieldsValues(),
+            'fields_value' => $this->getModuleConfigFromDB(),
             'languages' => $this->context->controller->getLanguages(),
             'id_language' => $defaultLang,
         ];
 
-        return $helper->generateForm([$this->makeConfigurationForm()]);
+        return $helper->generateForm([$this->makeConfigForm()]);
+    }
+
+    protected function makeConfigForm()
+    {
+        return [
+            'form' => [
+                'legend' => [
+                    'title' => $this->translator->trans('Settings', [], 'Modules.Stickysalesbanner.Admin'),
+                    'icon' => 'icon-cogs',
+                ],
+
+                'input' => [
+                    [
+                        'type' => 'switch',
+                        'label' => $this->translator->trans('Enabled', [], 'Modules.Stickysalesbanner.Admin'),
+                        'name' => $this->module->module_prefix . 'LIVE_MODE',
+                        'is_bool' => true,
+                        'desc' => $this->translator->trans('Enable this module on your shop', [], 'Modules.Stickysalesbanner.Admin'),
+                        'values' => [
+                            [
+                                'id' => 'active_on',
+                                'value' => true,
+                                'label' => $this->translator->trans('Yes', [], 'Modules.Stickysalesbanner.Admin')
+                            ],
+                            [
+                                'id' => 'active_off',
+                                'value' => false,
+                                'label' => $this->translator->trans('No', [], 'Modules.Stickysalesbanner.Admin')
+                            ]
+                        ],
+                    ],
+                    [
+                        'type' => 'text',
+                        'required' => true,
+                        'prefix' => '<i class="icon icon-text-width"></i>',
+                        'label' => $this->translator->trans('First Line Message', [], 'Modules.Stickysalesbanner.Admin'),
+                        'name' => $this->module->module_prefix . 'MESSAGE_FIRST_LINE',
+                        'desc' => $this->translator->trans('Enter a message text for your banner. This text will be always visible when the module is enabled', [], 'Modules.Stickysalesbanner.Admin'),
+                        'col' => 4,
+                    ],
+                    [
+                        'type' => 'text',
+                        'required' => true,
+                        'prefix' => '<i class="icon icon-text-width"></i>',
+                        'label' => $this->translator->trans('Second Line Message', [], 'Modules.Stickysalesbanner.Admin'),
+                        'name' => $this->module->module_prefix . 'MESSAGE_SECOND_LINE',
+                        'desc' => $this->translator->trans('Enter a message text for your banner', [], 'Modules.Stickysalesbanner.Admin'),
+                        'col' => 4,
+                    ],
+                    [
+                        'type' => 'text',
+                        'required' => true,
+                        'prefix' => '<i class="icon icon-dollar"></i>',
+                        'label' => $this->translator->trans('Coupon Code', [], 'Modules.Stickysalesbanner.Admin'),
+                        'name' => $this->module->module_prefix . 'COUPON_CODE',
+                        'desc' => $this->translator->trans('Enter a valid coupon code', [], 'Modules.Stickysalesbanner.Admin'),
+                        'col' => 4,
+                    ],
+                    [
+                        'type' => 'color',
+                        'id'   => 'bg_color_0',
+                        'label' => $this->translator->trans('Background Color (HEX value)', [], 'Modules.Stickysalesbanner.Admin'),
+                        'name' => $this->module->module_prefix . 'BG_COLOR',
+                        'data-hex' => true,
+                        'col' => 20
+                    ],
+                    [
+                        'type' => 'color',
+                        'id'   => 'txt_color_0',
+                        'label' => $this->translator->trans('Text color (HEX value)', [], 'Modules.Stickysalesbanner.Admin'),
+                        'name' => $this->module->module_prefix . 'TEXT_COLOR',
+                        'data-hex' => true,
+                        'col' => 20
+                    ],
+                ],
+                'submit' => [
+                    'title' => $this->translator->trans('Save', [], 'Modules.Stickysalesbanner.Admin'),
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * Save form data.
+     *
+     * @param $form_data
+     *
+     * @return array
+     */
+    protected function postProcess($form_data): array
+    {
+        $validation = new FormValidator($form_data);
+        $errors = $validation->validateForm();
+        if (!empty($errors)) {
+            return [
+                'is_valid' => false,
+                'messages' => $errors
+            ];
+        }
+
+        $resultMessage = null;
+
+        $dbOp_response = $this->updateModuleConfigToDB($this->db, $form_data);
+        if (!$dbOp_response['is_valid']) {
+            return [
+                'is_valid' => false,
+                'messages' => array($dbOp_response['message'])
+            ];
+        }
+
+        return [
+            'is_valid' => true,
+            'messages' => array($resultMessage),
+
+        ];
     }
 
     /**
@@ -89,121 +204,50 @@ class StickysalesbannerGetContentController
      *
      * @throws PrestaShopException
      */
-    protected function getConfigFieldsValues()
+    private function getModuleConfigFromDB(): array
     {
-        $db = Db::getInstance(_PS_USE_SQL_SLAVE_);
         $vars = array();
-
-        $results = $db->executeS('SELECT `name`, `value` FROM `' . _DB_PREFIX_ . $this->module->name . '`');
+        $results = $this->db->executeS('SELECT `name`, `value` FROM `' . _DB_PREFIX_ . $this->module->name . '`');
 
         foreach ($results as $row) {
             $vars[$this->module->module_prefix . $row["name"]] = $row["value"];
         }
 
-        unset($db, $results);
+        unset($results);
         return $vars;
     }
 
-    protected function makeConfigurationForm()
+    /**
+     * @param $db
+     * @param $form_data
+     *
+     * @return array
+     */
+    private function updateModuleConfigToDB($db, $form_data): array
     {
-        return [
-            'form' => [
-                    'legend' => [
-                        'title' => $this->translator->trans('Settings', [], 'Modules.Stickysalesbanner.Admin'),
-                        'icon' => 'icon-cogs',
-                    ],
-
-                    'input' => [
-                        [
-                            'type' => 'switch',
-                            'label' => $this->translator->trans('Enabled', [], 'Modules.Stickysalesbanner.Admin'),
-                            'name' => $this->module->module_prefix . 'LIVE_MODE',
-                            'is_bool' => true,
-                            'desc' => $this->translator->trans('Enable this module on your shop', [], 'Modules.Stickysalesbanner.Admin'),
-                            'values' => [
-                                    [
-                                        'id' => 'active_on',
-                                        'value' => true,
-                                        'label' => $this->translator->trans('Yes', [], 'Modules.Stickysalesbanner.Admin')
-                                    ],
-                                    [
-                                        'id' => 'active_off',
-                                        'value' => false,
-                                        'label' => $this->translator->trans('No', [], 'Modules.Stickysalesbanner.Admin')
-                                    ]
-                            ],
-                        ],
-                        [
-                            'type' => 'text',
-                            'required' => true,
-                            'prefix' => '<i class="icon icon-text-width"></i>',
-                            'label' => $this->translator->trans('First Line Message', [], 'Modules.Stickysalesbanner.Admin'),
-                            'name' => $this->module->module_prefix . 'MESSAGE_FIRST_LINE',
-                            'desc' => $this->translator->trans('Enter a message text for your banner. This text will be always visible when the module is enabled', [], 'Modules.Stickysalesbanner.Admin'),
-                            'col' => 4,
-                        ],
-                        [
-                            'type' => 'text',
-                            'required' => true,
-                            'prefix' => '<i class="icon icon-text-width"></i>',
-                            'label' => $this->translator->trans('Second Line Message', [], 'Modules.Stickysalesbanner.Admin'),
-                            'name' => $this->module->module_prefix . 'MESSAGE_SECOND_LINE',
-                            'desc' => $this->translator->trans('Enter a message text for your banner', [], 'Modules.Stickysalesbanner.Admin'),
-                            'col' => 4,
-                        ],
-                        [
-                            'type' => 'text',
-                            'required' => true,
-                            'prefix' => '<i class="icon icon-dollar"></i>',
-                            'label' => $this->translator->trans('Coupon Code', [], 'Modules.Stickysalesbanner.Admin'),
-                            'name' => $this->module->module_prefix . 'COUPON_CODE',
-                            'desc' => $this->translator->trans('Enter a valid coupon code', [], 'Modules.Stickysalesbanner.Admin'),
-                            'col' => 4,
-                        ],
-                        [
-                            'type' => 'color',
-                            'id'   => 'bg_color_0',
-                            'label' => $this->translator->trans('Background Color (HEX value)', [], 'Modules.Stickysalesbanner.Admin'),
-                            'name' => $this->module->module_prefix . 'BG_COLOR',
-                            'data-hex' => true,
-                            'col' => 20
-                        ],
-                        [
-                            'type' => 'color',
-                            'id'   => 'txt_color_0',
-                            'label' => $this->translator->trans('Text color (HEX value)', [], 'Modules.Stickysalesbanner.Admin'),
-                            'name' => $this->module->module_prefix . 'TEXT_COLOR',
-                            'data-hex' => true,
-                            'col' => 20
-                        ],
-                    ],
-                    'submit' => [
-                        'title' => $this->translator->trans('Save', [], 'Modules.Stickysalesbanner.Admin'),
-                    ],
-            ],
-        ];
-    }
-
-    protected function postProcess($form_values)
-    {
-        $db = DB::getInstance();
-        foreach ($form_values as $key => $value) {
+        foreach ($form_data as $key => $value) {
             if (!$db->update($this->module->name, [
-                    'value' => pSQL($value),
-                    'date_upd' => date('Y-m-d H:i:s'),
+                'value' => pSQL($value),
+                'date_upd' => date('Y-m-d H:i:s'),
             ], 'name = "' . $key . '"', 0, false, false, true)
             ) {
-                    return false;
+                return [
+                    'is_valid' => false,
+                    'message' => 'Something went wrong updating config values on the database'
+                ];
             }
         }
 
-        return true;
+        return [
+            'is_valid' => true,
+            'message' => ''
+        ];
     }
 
     /**
      * @return array
      */
-    protected function getFormValues()
+    private function getConfigFormValues()
     {
         return [
             'live_mode' => (string)(Tools::getValue($this->module->module_prefix . 'LIVE_MODE')),
@@ -222,19 +266,25 @@ class StickysalesbannerGetContentController
      */
     private function processConfiguration()
     {
-        $output = null;
-        $form_values = null;
+        $submitOutput = $this->handleFormSubmit();
+        return $submitOutput . $this->renderForm();
+    }
 
+    private function handleFormSubmit(): string
+    {
+        $output = '';
         if ((bool)Tools::isSubmit('submit' . $this->module->name)) {
-            $form_values = $this->getFormValues();
-            if (!$this->postProcess($form_values)) {
-                    $output .= $this->module->displayError($this->translator->trans('Invalid Configuration value', [], 'Modules.Stickysalesbanner.Admin'));
+
+            $form_data = $this->getConfigFormValues();
+            $processResult = $this->postProcess($form_data);
+            if (!$processResult['is_valid']) {
+                foreach ($processResult['messages'] as $message) {
+                    $output .= $this->module->displayError($this->translator->trans($message, [], 'Modules.Stickysalesbanner.Admin'));
+                }
             } else {
-                    $output .= $this->module->displayConfirmation($this->translator->trans('Settings updated', [], 'Modules.Stickysalesbanner.Admin'));
+                $output .= $this->module->displayConfirmation($this->translator->trans('Settings updated', [], 'Modules.Stickysalesbanner.Admin'));
             }
         }
-        unset($form_values);
-
-        return $output . $this->renderForm();
+        return $output;
     }
 }
