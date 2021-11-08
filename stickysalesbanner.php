@@ -121,26 +121,29 @@ class Stickysalesbanner extends Module
 
 
     /**
-    * Add the CSS & JavaScript files you want to be added on the FO.
+    * Add Tailwind CSS JIT CDN and AlpineJS on the FO.
     */
     public function hookActionFrontControllerSetMedia($params)
     {
-        $this->context->controller->registerStylesheet(
-            'module-stickysalesbanner-style',
-            'modules/'.$this->name.'/views/css/sticky.css',
+        $this->context->controller->registerJavascript(
+            'module-stickysalesbanner-tailwindcss',
+            'https://cdn-tailwindcss.vercel.app/',
             [
+                'server' => 'remote',
                 'media' => 'all',
-                'priority' => 200,
+                'priority' => 200
             ]
         );
 
         $this->context->controller->registerJavascript(
-            'module-stickysalesbanner-lib',
-            'modules/'.$this->name.'/views/js/sticky.js',
+            'module-stickysalesbanner-alpinejslib',
+            'https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js',
             [
+                'server' => 'remote',
+                'attributes' => 'defer',
                 'media' => 'all',
-                'priority' => 200,
-                ]
+                'priority' => 200
+            ]
         );
     }
 }

@@ -19,18 +19,30 @@
 *}
 
 {if $live_mode eq '1'}
-    <div class="stickybanner-section" style="background-color: {$bg_color};">
-        <div aria-label="Toggle menu" id="stickybanner-button" style="background-color: {$bg_color};">
-            <span class="material-icons" style="color: {$text_color}; font-size: xx-large">keyboard_arrow_down</span>
-        </div>
+<div
+    x-data="{ open: true }"
+    class="sticky bottom-0 m-auto w-full h-[90px] z-10"
+    :class="open ? 'h-[90px]' : 'h-[60px]'"
+    style="background-color: {$bg_color};"
+>
+    <button
+        @click="open = !open"
+        class="absolute z-20 focus:outline-none mt-[3px] rounded-full left-1/2 top-[-10%] cursor-pointer material-icons"
+        :class="open ? 'mt-[3px]' : 'mt-0'"
+        style="background-color: {$bg_color}; color: {$text_color}"
+    >
+        keyboard_arrow_down
+    </button>
 
-        <div class="stickybanner-wrapper">
-                <div class="stickybanner-content">
-                    <p class="stickybanner-head" style="color: {$text_color}">
-                            <span>{$message_first_line}</span>
-                    </p>
-                    <p id="coupon-code" class="stickybanner-text" style="color: {$text_color}">{$message_second_line}:&nbsp;<span style="text-decoration: underline">{$coupon_code}</span></p>
-                </div>
+    <div class="relative my-0 mx-auto pt-2.5">
+            <div class="relative text-center m-0 p-2.5">
+                <p class="m-0" style="color: {$text_color}">
+                        <span>{$message_first_line}</span>
+                </p>
+                <p :class="open ? '' : 'hidden'" style="color: {$text_color}" >
+                    {$message_second_line}:&nbsp;<span class="font-bold underline">{$coupon_code}</span>
+                </p>
             </div>
-    </div>
+        </div>
+</div>
 {/if}
