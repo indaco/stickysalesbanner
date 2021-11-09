@@ -3,9 +3,11 @@
     <img src="screenshots/module_tile.png" alt="module tile"/>
 </div>
 
+> This is an experimental version using TailwindCSS V3 alpha JIT CDN and AlpineJS.
+
 ## Overview
 
-Prestashop module to create a sticky banner at the bottom of the pages.
+Prestashop module to add a sticky banner at the bottom of the pages.
 
 From SEO perspective, popup banners are not the ideal solution. With this module you overpass it in a simple way.
 
